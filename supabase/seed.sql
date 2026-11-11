@@ -17,12 +17,21 @@ from (values
 join public.dish_categories c on c.slug = v.cat
 on conflict do nothing;
 
-insert into public.orders (id, access_token_hash, status, contact_name, contact_phone, event_type_id, event_date, adults, children,
+-- Guest customer (no auth_user_id) with one event and one order.
+insert into public.customers (id, full_name, phone) values ('demo-customer-1','דנה כהן','050-1234567')
+on conflict do nothing;
+
+insert into public.events (id, customer_id, event_type_id, event_date, adults, children)
+select 'demo-event-1','demo-customer-1', e.id, current_date + 7, 20, 5
+from public.event_types e where e.name = 'יום הולדת'
+on conflict do nothing;
+
+insert into public.orders (id, access_token_hash, customer_id, event_id, status,
   fulfillment, slot_id, slot_start, slot_end, subtotal, delivery_fee, total, submitted_at)
-select 'demo-order-1','demo-token-hash-1','pending_approval','דנה כהן','050-1234567', e.id, current_date + 7, 20, 5,
-  'pickup', s.id, s.start_time, s.end_time, 76000, 0, 76000, now()
-from public.event_types e, public.time_slots s
-where e.name='יום הולדת' and s.fulfillment='pickup' and s.start_time='16:00'
+select 'demo-order-1','demo-token-hash-1','demo-customer-1','demo-event-1','pending_approval',
+  'pickup', s.id, s.start_time, s.end_time, 74000, 0, 74000, now()
+from public.time_slots s
+where s.fulfillment = 'pickup' and s.start_time = '16:00'
 on conflict do nothing;
 
 insert into public.order_items (order_id, dish_id, quantity, snapshot_name, snapshot_pricing_unit, snapshot_unit_price, snapshot_line_total) values
